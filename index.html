@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>গ্রাহক CRM</title>
+<link href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#f3f6f5;--card:#fff;--ink:#14302b;--mute:#5b706b;--line:#d8e1de;--brand:#0f766e;--brand2:#0b5a54;--soft:#e4f1ef;--warn:#b42318;--warnbg:#fdecea}
+*{box-sizing:border-box}
+body{margin:0;font-family:'Hind Siliguri',Arial,sans-serif;background:var(--bg);color:var(--ink);font-size:16px}
+.hide{display:none!important}
+input,button,select{font:inherit}
+input{width:100%;padding:9px 11px;border:1px solid var(--line);border-radius:6px;background:#fff;color:var(--ink)}
+input:focus,button:focus-visible{outline:2px solid var(--brand);outline-offset:1px}
+label{display:block;font-weight:500;margin:12px 0 4px}
+button{padding:9px 16px;border:0;border-radius:6px;background:var(--brand);color:#fff;font-weight:600;cursor:pointer}
+button:hover{background:var(--brand2)}
+button.ghost{background:transparent;color:var(--brand);border:1px solid var(--brand)}
+button.ghost:hover{background:var(--soft)}
+button.danger{background:var(--warn)}
+button.small{padding:4px 10px;font-size:14px}
+#login{max-width:380px;margin:12vh auto;padding:28px;background:var(--card);border:1px solid var(--line);border-radius:10px}
+#login h1{margin:0 0 4px;font-size:26px}
+#login p{margin:0 0 8px;color:var(--mute)}
+#login button{width:100%;margin-top:18px}
+.err{color:var(--warn);min-height:22px;margin-top:10px;font-size:15px}
+header{background:var(--brand);color:#fff;padding:12px 18px;display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+header h1{margin:0;font-size:20px;flex:1}
+header span{font-size:14px;opacity:.9}
+header button{background:rgba(255,255,255,.18)}
+header button:hover{background:rgba(255,255,255,.3)}
+nav{display:flex;gap:4px;padding:10px 18px 0;background:var(--card);border-bottom:1px solid var(--line);overflow-x:auto}
+nav button{background:transparent;color:var(--mute);border-radius:6px 6px 0 0;border-bottom:3px solid transparent;white-space:nowrap}
+nav button:hover{background:var(--soft)}
+nav button.on{color:var(--brand);border-bottom-color:var(--brand)}
+main{max-width:1050px;margin:0 auto;padding:18px}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:20px}
+.stat{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:14px}
+.stat b{display:block;font-size:30px;line-height:1.1}
+.stat.alert{background:var(--warnbg);border-color:#f2b8b2}
+.stat.alert b{color:var(--warn)}
+.panel{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:16px;margin-bottom:20px}
+.panel h2{margin:0 0 12px;font-size:19px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:0 16px}
+.wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:15px}
+th,td{padding:9px 10px;border-bottom:1px solid var(--line);text-align:left;vertical-align:middle}
+th{background:var(--soft);font-weight:600;white-space:nowrap}
+td input[type=date]{padding:4px 6px;width:auto}
+.late{color:var(--warn);font-weight:600}
+.muted{color:var(--mute)}
+#toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:var(--ink);color:#fff;padding:10px 18px;border-radius:8px;opacity:0;pointer-events:none;transition:opacity .2s}
+#toast.show{opacity:1}
+</style>
+</head>
+<body>
+
+<!-- লগইন -->
+<div id="login">
+  <h1>গ্রাহক CRM</h1>
+  <p>চালিয়ে যেতে সাইন ইন করুন</p>
+  <form id="loginForm">
+    <label for="lu">ইউজারনেম</label>
+    <input id="lu" autocomplete="username" required>
+    <label for="lp">পাসওয়ার্ড</label>
+    <input id="lp" type="password" autocomplete="current-password" required>
+    <button type="submit" id="lbtn">সাইন ইন</button>
+    <div class="err" id="lerr"></div>
+  </form>
+</div>
+
+<!-- অ্যাপ -->
+<div id="app" class="hide">
+  <header>
+    <h1>গ্রাহক CRM</h1>
+    <span id="who"></span>
+    <button id="syncBtn">সিঙ্ক করুন</button>
+    <button id="outBtn">সাইন আউট</button>
+  </header>
+  <nav id="nav">
+    <button data-v="dash" class="on">ড্যাশবোর্ড</button>
+    <button data-v="add">নতুন গ্রাহক</button>
+    <button data-v="list">সব গ্রাহক</button>
+    <button data-v="users" id="usersTab" class="hide">ইউজার</button>
+  </nav>
+
+  <main>
+    <!-- ড্যাশবোর্ড -->
+    <section id="v-dash">
+      <div class="stats">
+        <div class="stat"><b id="sTotal">0</b>মোট গ্রাহক</div>
+        <div class="stat"><b id="sToday">0</b>আজ যোগ হয়েছে</div>
+        <div class="stat"><b id="sDue">0</b>আজকের ফলো-আপ</div>
+        <div class="stat alert"><b id="sLate">0</b>দেরি হয়েছে</div>
+      </div>
+      <div class="panel">
+        <h2>ফলো-আপ করতে হবে</h2>
+        <div class="wrap"><table>
+          <thead><tr><th>নাম</th><th>নম্বর</th><th>পণ্য কোড</th><th>ফলো-আপ তারিখ</th><th>এন্ট্রি করেছেন</th></tr></thead>
+          <tbody id="dueBody"></tbody>
+        </table></div>
+      </div>
+    </section>
+
+    <!-- নতুন গ্রাহক -->
+    <section id="v-add" class="hide">
+      <div class="panel">
+        <h2>নতুন গ্রাহক যোগ করুন</h2>
+        <form id="addForm">
+          <div class="grid">
+            <div><label for="fName">গ্রাহকের নাম *</label><input id="fName" required></div>
+            <div><label for="fContact">কন্ট্রাক্ট নম্বর *</label><input id="fContact" inputmode="tel" required></div>
+            <div><label for="fAddress">ঠিকানা</label><input id="fAddress"></div>
+            <div><label for="fProduct">পণ্য কোড</label><input id="fProduct"></div>
+            <div><label for="fPurchase">কেনার তারিখ</label><input id="fPurchase" type="date"></div>
+            <div><label for="fFollow">ফলো-আপ তারিখ</label><input id="fFollow" type="date"></div>
+          </div>
+          <button type="submit" id="addBtn" style="margin-top:18px">সংরক্ষণ করুন</button>
+        </form>
+      </div>
+    </section>
+
+    <!-- সব গ্রাহক -->
+    <section id="v-list" class="hide">
+      <div class="panel">
+        <h2>সব গ্রাহক (<span id="listCount">0</span>)</h2>
+        <input id="q" placeholder="নাম, নম্বর, ঠিকানা বা পণ্য কোড দিয়ে খুঁজুন" style="margin-bottom:12px">
+        <div class="wrap"><table>
+          <thead><tr><th>নাম</th><th>নম্বর</th><th>ঠিকানা</th><th>পণ্য কোড</th><th>কেনার তারিখ</th><th>ফলো-আপ</th><th>এন্ট্রি করেছেন</th><th class="adminCol hide"></th></tr></thead>
+          <tbody id="listBody"></tbody>
+        </table></div>
+      </div>
+    </section>
+
+    <!-- ইউজার (শুধু অ্যাডমিন) -->
+    <section id="v-users" class="hide">
+      <div class="panel">
+        <h2>ইউজার যোগ করুন / পাসওয়ার্ড বদলান</h2>
+        <p class="muted" style="margin-top:0">আগে থেকে থাকা ইউজারনেম লিখলে তার পাসওয়ার্ড বদলে যাবে।</p>
+        <form id="userForm">
+          <div class="grid">
+            <div><label for="uName">ইউজারনেম (ইংরেজিতে)</label><input id="uName" required></div>
+            <div><label for="uFull">পুরো নাম</label><input id="uFull"></div>
+            <div><label for="uPass">পাসওয়ার্ড (কমপক্ষে ৬ অক্ষর)</label><input id="uPass" type="text" required></div>
+          </div>
+          <button type="submit" style="margin-top:18px">সংরক্ষণ করুন</button>
+        </form>
+      </div>
+      <div class="panel">
+        <h2>বর্তমান ইউজার</h2>
+        <div class="wrap"><table>
+          <thead><tr><th>ইউজারনেম</th><th>নাম</th><th>ভূমিকা</th><th></th></tr></thead>
+          <tbody id="userBody"></tbody>
+        </table></div>
+      </div>
+    </section>
+  </main>
+</div>
+
+<div id="toast"></div>
+
+<script>
+// ===== এখানে আপনার Apps Script Web App-এর লিংক বসান =====
+const API_URL = 'https://script.google.com/macros/s/AKfycbydIFFdnRBjN3CJ_pcTlHGrqaS7O629Eta4iBdb7P4Y7Z5mEok2W4qdtJ2ijDDnnPkxtQ/exec';
+
+const S = { token: null, user: null, customers: [], users: [] };
+const $ = id => document.getElementById(id);
+
+function esc(t) { const d = document.createElement('div'); d.textContent = (t == null ? '' : t); return d.innerHTML; }
+function today() {
+  const d = new Date();
+  return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+}
+function toast(m) { const t = $('toast'); t.textContent = m; t.classList.add('show'); setTimeout(() => t.classList.remove('show'), 2500); }
+function save(k, v) { try { v == null ? sessionStorage.removeItem(k) : sessionStorage.setItem(k, v); } catch (e) {} }
+function load(k) { try { return sessionStorage.getItem(k); } catch (e) { return null; } }
+
+async function api(action, data) {
+  if (API_URL.indexOf('PASTE_') === 0) throw new Error('index.html-এ API_URL বসানো হয়নি');
+  const r = await fetch(API_URL, { method: 'POST', body: JSON.stringify(Object.assign({ action: action, token: S.token }, data || {})) });
+  const j = await r.json();
+  if (!j.ok) {
+    if (j.error === 'AUTH') { signOut(); throw new Error('সেশন শেষ হয়েছে, আবার সাইন ইন করুন'); }
+    throw new Error(j.error);
+  }
+  return j;
+}
+
+// ===== লগইন / লগআউট =====
+$('loginForm').addEventListener('submit', async e => {
+  e.preventDefault();
+  $('lerr').textContent = ''; $('lbtn').disabled = true; $('lbtn').textContent = 'অপেক্ষা করুন...';
+  try {
+    const j = await api('login', { username: $('lu').value, password: $('lp').value });
+    S.token = j.token; S.user = j.user;
+    save('crmToken', j.token); save('crmUser', JSON.stringify(j.user));
+    $('lp').value = '';
+    await enter();
+  } catch (err) { $('lerr').textContent = err.message; }
+  $('lbtn').disabled = false; $('lbtn').textContent = 'সাইন ইন';
+});
+
+async function enter() {
+  $('login').classList.add('hide'); $('app').classList.remove('hide');
+  const admin = S.user.role === 'admin';
+  $('who').textContent = S.user.name + (admin ? ' (অ্যাডমিন)' : '');
+  $('usersTab').classList.toggle('hide', !admin);
+  document.querySelectorAll('.adminCol').forEach(x => x.classList.toggle('hide', !admin));
+  show('dash');
+  await refresh();
+}
+
+function signOut() {
+  if (S.token) { fetch(API_URL, { method: 'POST', body: JSON.stringify({ action: 'logout', token: S.token }) }).catch(() => {}); }
+  S.token = null; S.user = null; save('crmToken', null); save('crmUser', null);
+  $('app').classList.add('hide'); $('login').classList.remove('hide');
+}
+$('outBtn').onclick = signOut;
+
+// ===== পেজ বদল =====
+function show(v) {
+  ['dash', 'add', 'list', 'users'].forEach(x => $('v-' + x).classList.toggle('hide', x !== v));
+  document.querySelectorAll('#nav button').forEach(b => b.classList.toggle('on', b.dataset.v === v));
+}
+$('nav').addEventListener('click', e => { if (e.target.dataset.v) show(e.target.dataset.v); });
+
+// ===== ডেটা সিঙ্ক =====
+async function refresh(quiet) {
+  try {
+    const j = await api('list');
+    S.customers = j.customers;
+    if (S.user.role === 'admin') S.users = (await api('users')).users;
+    render();
+    if (!quiet) toast('সিঙ্ক হয়েছে');
+  } catch (err) { toast(err.message); }
+}
+$('syncBtn').onclick = () => refresh();
+setInterval(() => { if (S.token) refresh(true); }, 60000); // প্রতি ১ মিনিটে নিজে থেকে সিঙ্ক
+
+// ===== দেখানো =====
+function render() {
+  const t = today();
+  const all = S.customers;
+  const due = all.filter(c => c.FollowupDate && c.FollowupDate <= t).sort((a, b) => a.FollowupDate.localeCompare(b.FollowupDate));
+  $('sTotal').textContent = all.length;
+  $('sToday').textContent = all.filter(c => c.AddedAt === t).length;
+  $('sDue').textContent = due.filter(c => c.FollowupDate === t).length;
+  $('sLate').textContent = due.filter(c => c.FollowupDate < t).length;
+
+  $('dueBody').innerHTML = due.length ? due.map(c =>
+    '<tr><td>' + esc(c.Name) + '</td><td><a href="tel:' + esc(c.Contact) + '">' + esc(c.Contact) + '</a></td><td>' + esc(c.ProductCode) +
+    '</td><td class="' + (c.FollowupDate < t ? 'late' : '') + '">' + esc(c.FollowupDate) + (c.FollowupDate < t ? ' (দেরি)' : ' (আজ)') +
+    '</td><td>' + esc(c.AddedBy) + '</td></tr>').join('')
+    : '<tr><td colspan="5" class="muted">আজ কোনো ফলো-আপ বাকি নেই</td></tr>';
+
+  renderList();
+  if (S.user.role === 'admin') renderUsers();
+}
+
+function renderList() {
+  const q = $('q').value.trim().toLowerCase();
+  const t = today(), admin = S.user.role === 'admin';
+  const rows = S.customers.slice().reverse().filter(c =>
+    !q || (c.Name + ' ' + c.Contact + ' ' + c.Address + ' ' + c.ProductCode).toLowerCase().indexOf(q) > -1);
+  $('listCount').textContent = rows.length;
+  $('listBody').innerHTML = rows.length ? rows.map(c =>
+    '<tr><td>' + esc(c.Name) + '</td><td><a href="tel:' + esc(c.Contact) + '">' + esc(c.Contact) + '</a></td><td>' + esc(c.Address) +
+    '</td><td>' + esc(c.ProductCode) + '</td><td>' + esc(c.PurchaseDate) +
+    '</td><td><input type="date" value="' + esc(c.FollowupDate) + '" data-fu="' + esc(c.ID) + '" class="' + (c.FollowupDate && c.FollowupDate < t ? 'late' : '') + '"></td><td>' +
+    esc(c.AddedBy) + '</td>' +
+    (admin ? '<td><button class="small danger" data-del="' + esc(c.ID) + '">মুছুন</button></td>' : '') + '</tr>').join('')
+    : '<tr><td colspan="8" class="muted">কোনো গ্রাহক পাওয়া যায়নি</td></tr>';
+}
+$('q').addEventListener('input', renderList);
+
+$('listBody').addEventListener('change', async e => {
+  const id = e.target.dataset.fu;
+  if (!id) return;
+  try { await api('setFollowup', { id: id, followup: e.target.value }); toast('ফলো-আপ তারিখ সংরক্ষিত'); await refresh(true); }
+  catch (err) { toast(err.message); }
+});
+$('listBody').addEventListener('click', async e => {
+  const id = e.target.dataset.del;
+  if (!id || !confirm('এই গ্রাহক মুছে ফেলবেন?')) return;
+  try { await api('delete', { id: id }); toast('মুছে ফেলা হয়েছে'); await refresh(true); }
+  catch (err) { toast(err.message); }
+});
+
+// ===== নতুন গ্রাহক =====
+$('addForm').addEventListener('submit', async e => {
+  e.preventDefault();
+  $('addBtn').disabled = true;
+  try {
+    await api('add', { c: {
+      name: $('fName').value, contact: $('fContact').value, address: $('fAddress').value,
+      product: $('fProduct').value, purchase: $('fPurchase').value, followup: $('fFollow').value
+    } });
+    $('addForm').reset();
+    toast('গ্রাহক সংরক্ষণ হয়েছে');
+    await refresh(true);
+    show('list');
+  } catch (err) { toast(err.message); }
+  $('addBtn').disabled = false;
+});
+
+// ===== ইউজার ম্যানেজমেন্ট =====
+function renderUsers() {
+  $('userBody').innerHTML = S.users.map(u =>
+    '<tr><td>' + esc(u.username) + '</td><td>' + esc(u.name) + '</td><td>' + (u.role === 'admin' ? 'অ্যাডমিন' : 'ইউজার') + '</td><td>' +
+    (u.role === 'admin' ? '' : '<button class="small danger" data-du="' + esc(u.username) + '">মুছুন</button>') + '</td></tr>').join('');
+}
+$('userForm').addEventListener('submit', async e => {
+  e.preventDefault();
+  try {
+    const j = await api('saveUser', { username: $('uName').value, name: $('uFull').value, password: $('uPass').value });
+    $('userForm').reset(); toast(j.msg); await refresh(true);
+  } catch (err) { toast(err.message); }
+});
+$('userBody').addEventListener('click', async e => {
+  const u = e.target.dataset.du;
+  if (!u || !confirm(u + ' ইউজার মুছে ফেলবেন?')) return;
+  try { await api('deleteUser', { username: u }); toast('ইউজার মুছে ফেলা হয়েছে'); await refresh(true); }
+  catch (err) { toast(err.message); }
+});
+
+// ===== পেজ খুললে আগের সেশন থাকলে ফিরিয়ে আনা =====
+(async function () {
+  const tk = load('crmToken'), us = load('crmUser');
+  if (tk && us) { S.token = tk; S.user = JSON.parse(us); try { await enter(); } catch (e) { signOut(); } }
+})();
+</script>
+</body>
+</html>
